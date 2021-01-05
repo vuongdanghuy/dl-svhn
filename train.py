@@ -5,6 +5,7 @@ from keras.preprocessing.image import ImageDataGenerator
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.metrics import classification_report
 
 def train_detector(X_train, X_test, Y_train, Y_test, nb_filters = 32, batch_size=128, epochs=5, nb_classes=2, 
 	do_augment=False, save_file='./detector_model.h5y', random_state=0):
@@ -60,7 +61,7 @@ def train_detector(X_train, X_test, Y_train, Y_test, nb_filters = 32, batch_size
 	        zoom_range=0.2)
 	    datagen.fit(X_train)
 	    history = model.fit_generator(datagen.flow(X_train, Y_train, batch_size=batch_size),
-	                        samples_per_epoch=len(X_train), epochs=epochs,
+	                        steps_per_epoch=len(X_train), epochs=epochs,
 	                        validation_data=(X_test, Y_test))
 	else:
 	    history = model.fit(X_train, Y_train, batch_size=batch_size, epochs=epochs,
@@ -69,15 +70,10 @@ def train_detector(X_train, X_test, Y_train, Y_test, nb_filters = 32, batch_size
 	print('Test score:', score[0])
 	print('Test accuracy:', score[1])
 	# Save model
-	f = open(save_file, 'wb')
-	pickle.dump(model, f)
-	f.close()
-
-	# Save training history
-	f = open('./history', 'wb')
-	pickle.dump(history, f)
-	f.close()
+	model.save(save_file)
 
 	# Plot
 	# plt.plot(np.arange(epochs), history.history['loss'])
 	# plt.plot(np.arange(epochs), hist)
+	pred = model.predict(X_test)
+	print(classification_report(Y_test.argmax(axis=1), pred.argmax(axis=1), target_names=['background','digit']))

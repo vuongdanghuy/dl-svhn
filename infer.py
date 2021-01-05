@@ -7,6 +7,7 @@ import config as cfg
 import pickle
 from selective_search import selective_search
 from keras.models import load_model
+from nms import soft_nms, hard_nms
 
 # Load test label
 test_df = pd.read_csv(cfg.TEST_LABEL_FILE)
@@ -18,9 +19,9 @@ names = test_df.name.unique()
 # f = open(cfg.MODEL_PATH, 'r')
 # model = pickle.load(f)
 # f.close()
-model = load_model('./output/model.hdf5')
+model = load_model(cfg.MODEL_PATH)
 
-threshold = 0.7
+threshold = 0.8
 
 # Run test model in some test image
 for name in names:
@@ -59,11 +60,37 @@ for name in names:
 	bbox = rects[index]
 	print(bbox.shape)
 
+	if (len(bbox)==0):
+		print('Pass')
+		continue
+	
+	scores = pred[index, 1]
+	boxes = [bbox[:,0], bbox[:,0] + bbox[:,2], bbox[:,1], bbox[:,1] + bbox[:,3]]
+	boxes = np.array(boxes)
+	boxes = boxes.T
+	# D, S = hard_nms(boxes, scores, overlapThresh=0.65)
+	D, S = soft_nms(boxes, scores, threshold=0.8)
+
 	flag = False
-	for (x,y,w,h) in bbox:
+	# for i,(x,y,w,h) in zip(index,bbox):
+	# 	output = image.copy()
+	# 	red = (0,0,255)
+	# 	cv2.rectangle(output, (x,y), (x+w,y+h), color=red, thickness=1)
+	# 	cv2.putText(output, text=str(np.around(pred[i,1],4)), org=(x+5,y+5), 
+	# 		fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=red)
+	# 	cv2.imshow('Output', output)
+	# 	key = cv2.waitKey(0) & 0xFF
+
+	# 	if key == ord('q'):
+	# 		flag = True
+	# 		break
+
+	for i,(xmin,xmax,ymin,ymax) in enumerate(D):
 		output = image.copy()
 		red = (0,0,255)
-		cv2.rectangle(output, (x,y), (x+w,y+h), color=red, thickness=1)
+		cv2.rectangle(output, (xmin,ymin), (xmax,ymax), color=red, thickness=1)
+		cv2.putText(output, text=str(np.around(S[i],4)), org=(xmin+5,ymin+5), 
+			fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=red)
 		cv2.imshow('Output', output)
 		key = cv2.waitKey(0) & 0xFF
 

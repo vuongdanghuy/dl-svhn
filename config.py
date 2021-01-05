@@ -39,10 +39,10 @@ PRP_PER_IMAGE = 30
 NRP_PER_IMAGE = 30
 
 # IoU threshold to decide a box is positive
-posThresh = 0.6
+posThresh = 0.5
 
 # IoU threshold to decide a box is negative
-negThresh = 0.1
+negThresh = 0.2
 
 # Image target size
 IMG_SIZE = (32, 32)
@@ -55,4 +55,4 @@ EPOCHS = 25
 OUTPUT_PATH = './output/'
 
 # Model path
-MODEL_PATH = OUTPUT_PATH + 'model.pkl'
+MODEL_PATH = OUTPUT_PATH + 'model.hdf5'

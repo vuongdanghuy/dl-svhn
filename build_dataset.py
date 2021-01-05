@@ -6,6 +6,11 @@ import cv2
 from selective_search import selective_search
 from iou import iou
 import config as cfg
+import argparse
+
+ap = argparse.ArgumentParser()
+ap.add_argument('-n', '--nsamples', type=int, default=1000, help='Number of images used to create dataset')
+args = vars(ap.parse_args())
 
 # Check if destination folder is exist
 if not(os.path.exists(cfg.DES_PATH)):
@@ -26,13 +31,29 @@ totalPositive = 0
 totalNegative = 0
 
 # Loop all images in training data
-for name in train_names[:1000]:
+for name in train_names[:args['nsamples']]:
 	# Load images
 	print('[INFO] Proccessing image {}'.format(name))
 	image = cv2.imread(os.path.join(cfg.TRAIN_PATH + name))
 
 	# Get ground truth bounding box in image
 	gtbox = df[df.name == name]
+
+	for i in range(len(gtbox)):
+		label = gtbox['label'].values[i]
+		x = gtbox['left'].values[i]
+		y = gtbox['top'].values[i]
+		w = gtbox['width'].values[i]
+		h = gtbox['height'].values[i]
+
+		# Get ground truth box
+		window = image[y:y+h, x:x+w]
+		# Resize to target size
+		im_rsz = cv2.resize(window, cfg.IMG_SIZE)
+		# Save image
+		cv2.imwrite(os.path.join(cfg.DIGIT_PATH, str(totalPositive) + '_' + str(label) + '.png'), im_rsz)
+		# Increase counter
+		totalPositive += 1
 
 	# Perform selective search on image
 	rects = selective_search(image, method='quality', verbose=False, display=False)
@@ -59,18 +80,7 @@ for name in train_names[:1000]:
 			# Calculate IoU
 			overlapArea = iou(bbox, rect)
 
-			if overlapArea >= cfg.posThresh and tp_cnt < cfg.PRP_PER_IMAGE:
-				# Get predicted box
-				window = image[y:y+h, x:x+w]
-				# Resize to target size
-				im_rsz = cv2.resize(window, cfg.IMG_SIZE)
-				# Save image
-				cv2.imwrite(os.path.join(cfg.DIGIT_PATH, str(totalPositive) + '_' + str(label) + '.png'), im_rsz)
-				# Increase counter
-				tp_cnt += 1
-				totalPositive += 1
-
-			elif not fullOverlap and overlapArea < cfg.negThresh and fp_cnt < cfg.NRP_PER_IMAGE:
+			if not fullOverlap and cfg.negThresh <= overlapArea and overlapArea <= cfg.posThresh and fp_cnt < cfg.NRP_PER_IMAGE:
 				# Get predicted box
 				window = image[y:y+h, x:x+w]
 				# Resize to target size
@@ -81,7 +91,7 @@ for name in train_names[:1000]:
 				totalNegative += 1
 				fp_cnt += 1
 
-		flag = (tp_cnt == cfg.PRP_PER_IMAGE) and (fp_cnt == cfg.NRP_PER_IMAGE)
+		flag = (fp_cnt == cfg.NRP_PER_IMAGE)
 
 		if flag:
 			break

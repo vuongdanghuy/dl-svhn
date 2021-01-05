@@ -21,7 +21,13 @@ for name in os.listdir(cfg.DIGIT_PATH):
 
 	posImg.append(image)
 
-for name in os.listdir(cfg.NO_DIGIT_PATH):
+##
+no_digit_names = os.listdir(cfg.NO_DIGIT_PATH)
+# np.random.seed(42)
+# index = np.random.randint(len(no_digit_names), size=10000)
+# for i in index:
+# 	name = no_digit_names[i]
+for name in no_digit_names:
 	# Load image
 	image = cv2.imread(os.path.join(cfg.NO_DIGIT_PATH, name))
 
@@ -63,4 +69,5 @@ print('Shape of y_train, y_test: ', y_train.shape, y_test.shape)
 
 
 # Train model
-train_detector(X_train, X_test, y_train, y_test, batch_size=cfg.BATCH_SIZE, epochs=cfg.EPOCHS, save_file=cfg.MODEL_PATH)
+train_detector(X_train, X_test, y_train, y_test, batch_size=cfg.BATCH_SIZE, epochs=cfg.EPOCHS, 
+	do_augment=False, save_file=cfg.MODEL_PATH)
