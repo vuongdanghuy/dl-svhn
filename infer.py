@@ -55,28 +55,45 @@ for name in names:
 	pred = model.predict(rp)
 	
 	# Find every bounding box with probability greater than threshold
-	index = np.where(pred[:,1] >= threshold)[0]
+	index = np.where(np.max(pred[:,:10], axis=1) >= threshold)[0]
 
-	bbox = rects[index]
+	bbox = rects[index,:]
 	print(bbox.shape)
 
-	if (len(bbox)==0):
-		print('Pass')
-		continue
+	# if (len(bbox)==0):
+	# 	print('Pass')
+	# 	continue
 	
-	scores = pred[index, 1]
-	boxes = [bbox[:,0], bbox[:,0] + bbox[:,2], bbox[:,1], bbox[:,1] + bbox[:,3]]
-	boxes = np.array(boxes)
-	boxes = boxes.T
-	# D, S = hard_nms(boxes, scores, overlapThresh=0.65)
-	D, S = soft_nms(boxes, scores, threshold=0.8)
+	# scores = pred[index, 1]
+	# boxes = [bbox[:,0], bbox[:,0] + bbox[:,2], bbox[:,1], bbox[:,1] + bbox[:,3]]
+	# boxes = np.array(boxes)
+	# boxes = boxes.T
+	# # D, S = hard_nms(boxes, scores, overlapThresh=0.65)
+	# D, S = soft_nms(boxes, scores, threshold=0.8)
 
 	flag = False
-	# for i,(x,y,w,h) in zip(index,bbox):
+	for i,(x,y,w,h) in zip(index,bbox):
+		output = image.copy()
+		red = (0,0,255)
+		
+		label = np.argmax(pred[i,:])
+		prob = pred[i,label]
+
+		cv2.rectangle(output, (x,y), (x+w,y+h), color=red, thickness=1)
+		cv2.putText(output, text=str(label) + ':' + str(np.around(prob,4)), org=(x+5,y+5), 
+			fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.3, color=red)
+		cv2.imshow('Output', output)
+		key = cv2.waitKey(0) & 0xFF
+
+		if key == ord('q'):
+			flag = True
+			break
+
+	# for i,(xmin,xmax,ymin,ymax) in enumerate(D):
 	# 	output = image.copy()
 	# 	red = (0,0,255)
-	# 	cv2.rectangle(output, (x,y), (x+w,y+h), color=red, thickness=1)
-	# 	cv2.putText(output, text=str(np.around(pred[i,1],4)), org=(x+5,y+5), 
+	# 	cv2.rectangle(output, (xmin,ymin), (xmax,ymax), color=red, thickness=1)
+	# 	cv2.putText(output, text=str(np.around(S[i],4)), org=(xmin+5,ymin+5), 
 	# 		fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=red)
 	# 	cv2.imshow('Output', output)
 	# 	key = cv2.waitKey(0) & 0xFF
@@ -84,19 +101,6 @@ for name in names:
 	# 	if key == ord('q'):
 	# 		flag = True
 	# 		break
-
-	for i,(xmin,xmax,ymin,ymax) in enumerate(D):
-		output = image.copy()
-		red = (0,0,255)
-		cv2.rectangle(output, (xmin,ymin), (xmax,ymax), color=red, thickness=1)
-		cv2.putText(output, text=str(np.around(S[i],4)), org=(xmin+5,ymin+5), 
-			fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=red)
-		cv2.imshow('Output', output)
-		key = cv2.waitKey(0) & 0xFF
-
-		if key == ord('q'):
-			flag = True
-			break
 
 	if flag:
 		break

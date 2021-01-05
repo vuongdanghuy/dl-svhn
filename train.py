@@ -2,6 +2,7 @@ from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten
 from keras.layers import Conv2D, MaxPooling2D
 from keras.preprocessing.image import ImageDataGenerator
+from keras.callbacks import EarlyStopping
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
@@ -52,6 +53,8 @@ def train_detector(X_train, X_test, Y_train, Y_test, nb_filters = 32, batch_size
 	              optimizer='adam',
 	              metrics=['accuracy'])
 
+	callback = EarlyStopping(monitor='loss', patience=3)
+
 	if do_augment:
 	    datagen = ImageDataGenerator(
 	        rotation_range=20,
@@ -61,19 +64,39 @@ def train_detector(X_train, X_test, Y_train, Y_test, nb_filters = 32, batch_size
 	        zoom_range=0.2)
 	    datagen.fit(X_train)
 	    history = model.fit_generator(datagen.flow(X_train, Y_train, batch_size=batch_size),
-	                        steps_per_epoch=len(X_train), epochs=epochs,
+	                        steps_per_epoch=np.int(len(X_train)/batch_size), epochs=epochs,
 	                        validation_data=(X_test, Y_test))
 	else:
 	    history = model.fit(X_train, Y_train, batch_size=batch_size, epochs=epochs,
-	          verbose=1, validation_data=(X_test, Y_test))
+	          verbose=1, callbacks=[callback], validation_data=(X_test, Y_test))
+    
+    # Save model
+	model.save(save_file)
+
+
 	score = model.evaluate(X_test, Y_test, verbose=0)
 	print('Test score:', score[0])
 	print('Test accuracy:', score[1])
-	# Save model
-	model.save(save_file)
+
+	try:
+		pred = model.predict(X_test)
+		print(classification_report(Y_test.argmax(axis=1), pred.argmax(axis=1), target_names=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'bg']))
+	except:
+		pass
+	
 
 	# Plot
-	# plt.plot(np.arange(epochs), history.history['loss'])
-	# plt.plot(np.arange(epochs), hist)
-	pred = model.predict(X_test)
-	print(classification_report(Y_test.argmax(axis=1), pred.argmax(axis=1), target_names=['background','digit']))
+	try:
+		loss = history.history['loss']
+		val_loss = history.history['val_loss']
+		acc = history.history['accuracy']
+		val_acc = history.history['val_accuracy']
+
+		plt.plot(np.arange(len(loss)), loss, label='loss')
+		plt.plot(np.arange(len(loss)), val_loss, label='val_loss')
+		plt.plot(np.arange(len(loss)), acc, label='acc')
+		plt.plot(np.arange(len(loss)), acc, label='val_acc')
+		plt.legend(loc='lower left')
+		plt.show()
+	except:
+		pass
