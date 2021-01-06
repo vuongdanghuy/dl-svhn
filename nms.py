@@ -37,7 +37,9 @@ def soft_nms(boxes, score, threshold=0.5):
         
         # Re-calculate box score base on iou
         for j in range(boxes.shape[0]):
-            iou_score = iou(D[i,:], boxes[j,:])
+            a = [D[i,0], D[i,0] + D[i,2], D[i,1], D[i,1] + D[i,3]]
+            b = [boxes[j,0], boxes[j,0] + boxes[j,2], boxes[j,1], boxes[j,1] + boxes[j,3]]
+            iou_score = iou(a,b)
             score[j] *= 1-iou_score
     
     # Remove all box with score lower than threshold
@@ -53,7 +55,7 @@ def hard_nms(boxes, score, overlapThresh=0.8):
     """
     Hard Non-Maximal Suppression
     @INPUT:
-        - boxes: predicted bounding box. An array with columns are: [xmin, xmax, ymin, ymax]
+        - boxes: predicted bounding box. An array with columns are: [x, y, w, h]
         - score: score of each box
         - overlapThreshold: Overlapping area threshold to decide whether or not two boxes are box for the same object
     @OUTPUT:
@@ -69,9 +71,9 @@ def hard_nms(boxes, score, overlapThresh=0.8):
     pick = []
     # grab the coordinates of the bounding boxes
     x1 = boxes[:,0]
-    x2 = boxes[:,1]
-    y1 = boxes[:,2]
-    y2 = boxes[:,3]
+    x2 = x1 + boxes[:,2]
+    y1 = boxes[:,1]
+    y2 = y1 + boxes[:,3]
     # compute the area of the bounding boxes and sort the bounding
     # boxes by the bottom-right y-coordinate of the bounding box
     area = (x2 - x1 + 1) * (y2 - y1 + 1)
