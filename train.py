@@ -22,7 +22,7 @@ def train_detector(X_train, X_test, Y_train, Y_test, nb_filters = 32, batch_size
 	pool_size = (2, 2)
 	# convolution kernel size
 	kernel_size = (3, 3) 
-	input_shape = (img_rows, img_cols, 1)
+	input_shape = (img_rows, img_cols, 3)
 
 
 	model = Sequential()
@@ -45,6 +45,9 @@ def train_detector(X_train, X_test, Y_train, Y_test, nb_filters = 32, batch_size
 	model.add(Flatten())
 	model.add(Dense(1024))
 	model.add(Activation('relu'))
+	
+	model.add(Dense(256))
+	model.add(Activation('relu'))
 	model.add(Dropout(0.5))
 	model.add(Dense(nb_classes))
 	model.add(Activation('softmax'))
@@ -53,7 +56,7 @@ def train_detector(X_train, X_test, Y_train, Y_test, nb_filters = 32, batch_size
 	              optimizer='adam',
 	              metrics=['accuracy'])
 
-	callback = EarlyStopping(monitor='loss', patience=3)
+	callback = EarlyStopping(monitor='val_loss', patience=3)
 
 	if do_augment:
 	    datagen = ImageDataGenerator(
@@ -80,7 +83,8 @@ def train_detector(X_train, X_test, Y_train, Y_test, nb_filters = 32, batch_size
 
 	try:
 		pred = model.predict(X_test)
-		print(classification_report(Y_test.argmax(axis=1), pred.argmax(axis=1), target_names=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'bg']))
+		print(classification_report(Y_test.argmax(axis=1), pred.argmax(axis=1), 
+			target_names=['bg', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10']))
 	except:
 		pass
 	

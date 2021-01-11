@@ -7,6 +7,7 @@ import config as cfg
 import pickle
 from selective_search import selective_search
 from keras.models import load_model
+from keras.models import Model
 from nms import soft_nms, hard_nms
 import argparse
 
@@ -18,29 +19,31 @@ ap.add_argument('-t', '--threshold', type=float, default=0.9, help='NMS threshol
 args = vars(ap.parse_args())
 
 # Load test label
-test_df = pd.read_csv(cfg.TEST_LABEL_FILE)
+# test_df = pd.read_csv(cfg.TEST_LABEL_FILE)
+test_df = pd.read_csv('../data/labels/train.csv')
 
 # Find all image names in test dataset
 names = test_df.name.unique()
 
-# Load detector model
+# Load detector and classifier model
 model = load_model(cfg.MODEL_PATH)
+output = model.get_layer(name='activation_5').output
+extractor = Model(inputs=model.input, outputs=output)
 
-threshold = 0.5
+f = open(cfg.CLASSIFY_PATH, 'rb')
+classifier = pickle.load(f)
+f.close()
+
+threshold = 0.9
 
 # Initialize list
-name_list = []
-x_list = []
-y_list = []
-w_list = []
-h_list = []
-prob_list = []
-label_list = []
+# file = open('./output/pred.csv', 'w')
+# file.write('{},{},{},{},{},{},{}\n'.format('name','x','y','w','h','score','label'))
 
 # Run test model in some test image
-for name in names[:1000]:
+for name in names:
 	print('Processing image {}'.format(name))
-	image = cv2.imread(os.path.join(cfg.TEST_PATH, name))
+	image = cv2.imread(os.path.join(cfg.EXTRA_PATH, name))
 
 	# Perform selective search
 	rects = selective_search(image, method='quality', verbose=False, display=False)
@@ -54,7 +57,7 @@ for name in names[:1000]:
 		# Resize to target size
 		im_rsz = cv2.resize(window, cfg.IMG_SIZE)
 		# Convert to grayscale
-		im_rsz = cv2.cvtColor(im_rsz, cv2.COLOR_BGR2GRAY)
+		# im_rsz = cv2.cvtColor(im_rsz, cv2.COLOR_BGR2GRAY)
 		# Append to list
 		rp.append(im_rsz)
 
@@ -62,12 +65,15 @@ for name in names[:1000]:
 	rp = np.array(rp, dtype=np.float)/255.0
 
 	# Add new dimension
-	rp = rp[:, np.newaxis]
-	rp = np.transpose(rp, axes=(0,2,3,1))
+	# rp = rp[:, np.newaxis]
+	# rp = np.transpose(rp, axes=(0,2,3,1))
 
 	# Predict 
-	pred = model.predict(rp)
-	
+	# pred = model.predict(rp)
+	features = extractor.predict(rp)
+	pred = classifier.predict_proba(features)
+	# print(pred[0])
+	# exit()
 	# Find every bounding box with probability greater than threshold
 	index = np.where(np.max(pred[:,1:], axis=1) >= threshold)[0]
 	pred = pred[index,:]
@@ -121,32 +127,27 @@ for name in names[:1000]:
 
 	for x,y,w,h,score,label in result:
 		# Append result to list
-		name_list.append(name)
-		x_list.append(int(x))
-		y_list.append(int(y))
-		w_list.append(int(w))
-		h_list.append(int(h))
-		prob_list.append(score)
-		label_list.append(int(label))
-		# output = image.copy()
-		# red = (0,0,255)
-		# green = (0,255,0)
-		# cv2.rectangle(output, (int(x),int(y)), (int(x+w),int(y+h)), color=red, thickness=1)
-		# cv2.putText(output, text='{}:{}'.format(int(label), np.around(score,4)), org=(int(x)+5,int(y)+5), 
-		# 	fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=green)
-		# cv2.imshow('Output', output)
-		# key = cv2.waitKey(0) & 0xFF
+		# file.write('{},{},{},{},{},{},{}\n'.format(name,x,y,w,h,score,label))
+		output = image.copy()
+		red = (0,0,255)
+		green = (0,255,0)
+		cv2.rectangle(output, (int(x),int(y)), (int(x+w),int(y+h)), color=red, thickness=1)
+		cv2.putText(output, text='{}:{}'.format(int(label), np.around(score,4)), org=(int(x)+5,int(y)+5), 
+			fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=green)
+		cv2.imshow('Output', output)
+		key = cv2.waitKey(0) & 0xFF
 
-		# if key == ord('q'):
-		# 	flag = True
-		# 	break
+		if key == ord('q'):
+			flag = True
+			break
 
 	if flag:
 		break
 
-# Create a pandas dataframe
-df = pd.DataFrame(list(zip(name_list, x_list, y_list, w_list, h_list, prob_list, label_list)),
-				columns=['name', 'x', 'y', 'w', 'h', 'score', 'label'])
+# # Create a pandas dataframe
+# df = pd.DataFrame(list(zip(name_list, x_list, y_list, w_list, h_list, prob_list, label_list)),
+# 				columns=['name', 'x', 'y', 'w', 'h', 'score', 'label'])
 
-# Save to .csv file
-df.to_csv('./output/pred.csv', index=False)
+# # Save to .csv file
+# df.to_csv('./output/pred.csv', index=False)
+# file.close()
