@@ -19,8 +19,8 @@ ap.add_argument('-t', '--threshold', type=float, default=0.9, help='NMS threshol
 args = vars(ap.parse_args())
 
 # Load test label
-# test_df = pd.read_csv(cfg.TEST_LABEL_FILE)
-test_df = pd.read_csv('../data/labels/train.csv')
+test_df = pd.read_csv(cfg.TEST_LABEL_FILE)
+# test_df = pd.read_csv('../data/labels/train.csv')
 
 # Find all image names in test dataset
 names = test_df.name.unique()
@@ -32,6 +32,10 @@ extractor = Model(inputs=model.input, outputs=output)
 
 f = open(cfg.CLASSIFY_PATH, 'rb')
 classifier = pickle.load(f)
+f.close()
+
+f = open(cfg.REGRESSION_PATH, 'rb')
+reg = pickle.load(f)
 f.close()
 
 threshold = 0.9
@@ -131,6 +135,18 @@ for name in names:
 		output = image.copy()
 		red = (0,0,255)
 		green = (0,255,0)
+		blue = (255,0,0)
+		# Predict offset
+		tmp = []
+		tmp.append((x,y,w,h))
+		tmp = np.array(tmp, dtype=np.float)
+		dP = reg.predict(tmp)
+		# Compute fine-tuned bounding box coordinate
+		fx = w*dP[0,0]+x
+		fy = h*dP[0,1]+y
+		fw = w*np.exp(dP[0,2])
+		fh = h*np.exp(dP[0,3])
+		cv2.rectangle(output, (int(fx),int(fy)), (int(fx+fw),int(fy+fh)), color=blue, thickness=1)
 		cv2.rectangle(output, (int(x),int(y)), (int(x+w),int(y+h)), color=red, thickness=1)
 		cv2.putText(output, text='{}:{}'.format(int(label), np.around(score,4)), org=(int(x)+5,int(y)+5), 
 			fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=green)
