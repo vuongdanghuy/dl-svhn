@@ -110,7 +110,7 @@ for name in train_names[:args['nsamples']]:
 						gtbox['left'].values[i],gtbox['top'].values[i],gtbox['width'].values[i],gtbox['height'].values[i],label))
 				# # Increase counter
 				totalPositive += 1
-				fp_cnt += 1
+				tp_cnt += 1
 
 			elif not fullOverlap and overlapArea <= cfg.negThresh and fp_cnt < cfg.NRP_PER_IMAGE:
 				# # Get predicted box

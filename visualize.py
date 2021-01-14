@@ -19,8 +19,8 @@ ap.add_argument('-t', '--threshold', type=float, default=0.9, help='NMS threshol
 args = vars(ap.parse_args())
 
 # Load test label
-test_df = pd.read_csv(cfg.TEST_LABEL_FILE)
-# test_df = pd.read_csv('../data/labels/train.csv')
+# test_df = pd.read_csv(cfg.TEST_LABEL_FILE)
+test_df = pd.read_csv('../data/labels/train_label.csv')
 
 # Find all image names in test dataset
 names = test_df.name.unique()
@@ -47,7 +47,7 @@ threshold = 0.9
 # Run test model in some test image
 for name in names:
 	print('Processing image {}'.format(name))
-	image = cv2.imread(os.path.join(cfg.EXTRA_PATH, name))
+	image = cv2.imread(os.path.join(cfg.TRAIN_PATH, name))
 
 	# Perform selective search
 	rects = selective_search(image, method='quality', verbose=False, display=False)
@@ -81,7 +81,7 @@ for name in names:
 	# Find every bounding box with probability greater than threshold
 	index = np.where(np.max(pred[:,1:], axis=1) >= threshold)[0]
 	pred = pred[index,:]
-	# print('[DBG] pred:\n', pred)
+	print('[DBG] Aha. Den day roi')
 
 	bbox = rects[index,:]
 	# print(bbox.shape)

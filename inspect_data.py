@@ -68,12 +68,16 @@ class_cnt = np.zeros(10)
 for index, row in df_test.iterrows():
 	class_cnt[row['label']-1] += 1
 
-plt.bar(labels, class_cnt)
-plt.xlabel('Class')
-plt.ylabel('Number')
-plt.title('Number of instances in each class')
-plt.show()
+# plt.bar(labels, class_cnt)
+# plt.xlabel('Class')
+# plt.ylabel('Number')
+# plt.title('Number of instances in each class')
+# plt.show()
 
 # Save label file
-df_train.to_csv('./train.csv',index=False)
-df_test.to_csv('./test.csv',index=False)
+# df_train.to_csv('./train.csv',index=False)
+# df_test.to_csv('./test.csv',index=False)
+tmp = df[df['name'].isin(train_name)]
+tmp.to_csv(cfg.TRAIN_LABEL_FILE,index=False)
+tmp1 = df[df['name'].isin(test_name)]
+tmp1.to_csv(cfg.TEST_LABEL_FILE,index=False)
