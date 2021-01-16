@@ -43,12 +43,12 @@ def train_detector(X_train, X_test, Y_train, Y_test, nb_filters = 32, batch_size
 	# (8, 4, 64) = (2048)
 
 	model.add(Flatten())
-	model.add(Dense(1024))
+	model.add(Dense(4096))
 	model.add(Activation('relu'))
 	
-	model.add(Dense(256))
+	model.add(Dense(4096))
 	model.add(Activation('relu'))
-	model.add(Dropout(0.5))
+	# model.add(Dropout(0.5))
 	model.add(Dense(nb_classes))
 	model.add(Activation('softmax'))
 

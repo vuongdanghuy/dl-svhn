@@ -66,8 +66,8 @@ for index, row in df_neg.sample(np.int(len(posLabel)*1.5), random_state=13).iter
 	negImg.append(window)
 
 # Convert to numpy array and normalizatin
-posImg = np.array(posImg, dtype=np.float)/255.0
-negImg = np.array(negImg, dtype=np.float)/255.0
+posImg = np.array(posImg, dtype=np.float32)/255.0
+negImg = np.array(negImg, dtype=np.float32)/255.0
 
 print('Shape of posImg: ', posImg.shape)
 print('Shape of posImg: ', negImg.shape)
