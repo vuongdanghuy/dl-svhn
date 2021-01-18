@@ -7,7 +7,10 @@ import config as cfg
 import pickle
 from selective_search import selective_search
 from keras.models import load_model
+from keras.models import Model
+from sklearn.metrics import average_precision_score
 from nms import soft_nms, hard_nms
+from iou import iou
 import argparse
 
 # Add argument parser to parse command line argument
@@ -15,36 +18,48 @@ ap = argparse.ArgumentParser()
 ap.add_argument('-m', '--method', type=str, default='soft', 
 	choices=['soft', 'hard', 'none'], help='Non-Maximal Suppression method')
 ap.add_argument('-t', '--threshold', type=float, default=0.9, help='NMS threshold')
+ap.add_argument('-i', '--iou', type=float, default=0.5, help='IoU overlap threshold')
 args = vars(ap.parse_args())
 
-# Load test label
-test_df = pd.read_csv(cfg.TEST_LABEL_FILE)
-
-# Find all image names in test dataset
-names = test_df.name.unique()
-
-# Load detector model
+# Load feature extractor model
 model = load_model(cfg.MODEL_PATH)
+output = model.get_layer(name='activation_5').output
+extractor = Model(inputs=model.input, outputs=output)
 
-threshold = 0.5
+# Load classifier model
+f = open(cfg.CLASSIFY_PATH, 'rb')
+classifier = pickle.load(f)
+f.close()
 
-# Initialize list
-name_list = []
-x_list = []
-y_list = []
-w_list = []
-h_list = []
-prob_list = []
-label_list = []
+# Load test label file
+df = pd.read_csv(cfg.TEST_LABEL_FILE)
 
-# Run test model in some test image
-for name in names[:1000]:
-	print('Processing image {}'.format(name))
-	image = cv2.imread(os.path.join(cfg.TEST_PATH, name))
+# Initialize True and Predict list
+f = open('../data/labels/infer.csv','w')
+f.write('name,x,y,w,h,score,label\n')
 
-	# Perform selective search
+# Find all image name in test set
+names = df.name.unique()
+
+# Loop all images
+for k,name in enumerate(names[1000:2000]):
+	# name = '141256.png'
+	print('[INFO] Processing image {}/{}'.format(k+1,len(names)))
+	# Load image
+	image = cv2.imread(os.path.join(cfg.EXTRA_PATH, name))
+
+	# Get image shape
+	ih,iw = image.shape[:2]
+
+	# Get ground truth box in image
+	# gtbox = df[df.name==name].copy()
+
+	# # Mark all ground truth box as not found
+	# for index, _ in gtbox.iterrows():
+	# 	gtbox.loc[index, 'matched'] = False
+
+	# Selective search
 	rects = selective_search(image, method='quality', verbose=False, display=False)
-	# print(rects.shape)
 
 	# Initialize bounding box
 	rp = []
@@ -52,50 +67,34 @@ for name in names[:1000]:
 		# Get predicted
 		window = image[y:y+h, x:x+w]
 		# Resize to target size
-		im_rsz = cv2.resize(window, cfg.IMG_SIZE)
-		# Convert to grayscale
-		im_rsz = cv2.cvtColor(im_rsz, cv2.COLOR_BGR2GRAY)
+		im_rsz = cv2.resize(window, cfg.IMG_SIZE, interpolation=cv2.INTER_AREA)
 		# Append to list
 		rp.append(im_rsz)
 
-	# Convert to grayscale and normalization
+	# Normalization
 	rp = np.array(rp, dtype=np.float)/255.0
 
-	# Add new dimension
-	rp = rp[:, np.newaxis]
-	rp = np.transpose(rp, axes=(0,2,3,1))
+	# Extract features
+	features = extractor.predict(rp)
 
-	# Predict 
-	pred = model.predict(rp)
+	# Classify
+	pred = classifier.predict_proba(features)
 	
 	# Find every bounding box with probability greater than threshold
-	index = np.where(np.max(pred[:,1:], axis=1) >= threshold)[0]
+	index = np.where(np.max(pred[:,1:], axis=1) >= 0.9)[0]
 	pred = pred[index,:]
-	# print('[DBG] pred:\n', pred)
-
 	bbox = rects[index,:]
-	# print(bbox.shape)
-	# print('[DBG] bbox:\n', bbox)
+	# print('[INFO] Found {} bounding box'.format(len(bbox)))
 
-	if (len(bbox)==0):
-		print('Pass')
-		continue
-
-	# Apply NMS for each class
+	# Non-Maximal Suppression for each class
 	labels = np.argmax(pred, axis=1)
 	uniqueLabel = np.unique(labels)
-	# print('labels: ', labels)
-	# print('uniqueLabel: ', uniqueLabel)
 	result = np.array([])
 
 	for label in uniqueLabel:
 		labelIdx = np.where(labels == label)[0]
-		# boxes = np.array([bbox[labelIdx,0], bbox[labelIdx,0] + bbox[labelIdx,2], 
-		# 		bbox[labelIdx,1], bbox[labelIdx,1] + bbox[labelIdx,3]]).T
 		boxes = bbox[labelIdx,:]
 		scores = pred[labelIdx,label]
-		# print('[DBG] boxes:\n', boxes)
-		# print('[DBG] scores:\n', scores)
 
 		if args['method'] == 'soft':
 			nms_boxes, nms_scores = soft_nms(boxes, scores, threshold=args['threshold'])
@@ -107,46 +106,70 @@ for name in names[:1000]:
 			nms_boxes, nms_scores = boxes, scores
 			nms_scores = nms_scores[:,np.newaxis]
 
-		# print('[DBG] nms_boxes:\n', nms_boxes)
-		# print('[DBG] nms_scores:\n', nms_scores)
-
-		tmp = np.hstack((nms_boxes, nms_scores, np.full((len(nms_scores),1), label)))
+		label_box = np.hstack((nms_boxes, nms_scores, np.full((len(nms_scores),1), label)))
 		if len(result):
-			result = np.vstack((result, tmp))
+			result = np.vstack((result, label_box))
 		else:
-			result = tmp
+			result = label_box
+	# print('[INFO] After NMS there are {} bounding box'.format(len(result)))
 
-	flag = False
-	print('[INFO] Number of predicted boxes: ', len(result))
+	# Find TP, FP for each class
+	for x,y,w,h,prob,label in result:
+		f.write('{},{},{},{},{},{},{}\n'.format(name,x,y,w,h,prob,label))
+		# If label is not in list then initialize
+	# 	label = int(label)
+	# 	if label not in P:
+	# 		P[label] = []
+	# 		T[label] = []
+	# 	# Append label
+	# 	P[label].append(prob)
+	# 	found_match = 0
 
-	for x,y,w,h,score,label in result:
-		# Append result to list
-		name_list.append(name)
-		x_list.append(int(x))
-		y_list.append(int(y))
-		w_list.append(int(w))
-		h_list.append(int(h))
-		prob_list.append(score)
-		label_list.append(int(label))
-		# output = image.copy()
-		# red = (0,0,255)
-		# green = (0,255,0)
-		# cv2.rectangle(output, (int(x),int(y)), (int(x+w),int(y+h)), color=red, thickness=1)
-		# cv2.putText(output, text='{}:{}'.format(int(label), np.around(score,4)), org=(int(x)+5,int(y)+5), 
-		# 	fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=green)
-		# cv2.imshow('Output', output)
-		# key = cv2.waitKey(0) & 0xFF
+	# 	# Loop all ground truth bounding box
+	# 	for index, row in gtbox.iterrows():
+	# 		# Get bounding box coordinate
+	# 		gtx = row['left']
+	# 		gty = row['top']
+	# 		gtw = row['width']
+	# 		gth = row['height']
 
-		# if key == ord('q'):
-		# 	flag = True
-		# 	break
+	# 		# If GT box label is not matched or GT box if found, then continue
+	# 		if row['matched'] or row['label'] != label:
+	# 			continue
 
-	if flag:
-		break
+	# 		# Find IoU
+	# 		iou_score = iou((x,x+w,y,y+h), (gtx,gtx+gtw,gty,gty+gth))
 
-# Create a pandas dataframe
-df = pd.DataFrame(list(zip(name_list, x_list, y_list, w_list, h_list, prob_list, label_list)),
-				columns=['name', 'x', 'y', 'w', 'h', 'score', 'label'])
+	# 		# If IoU is greater than a threshold, mark this GT box is found
+	# 		if iou_score >= args['iou']:
+	# 			found_match = 1
+	# 			gtbox.loc[index, 'matched'] = True
+	# 			break
+	# 	T[label].append(found_match)
+	# # print('[DBG] gtbox:\n', gtbox)
 
-# Save to .csv file
-df.to_csv('./output/pred.csv', index=False)
+	# # Loop all GT box to find what GT box is not found
+	# for index, row in gtbox.iterrows():
+	# 	if not row['matched']:
+	# 		if row['label'] not in P:
+	# 			P[row['label']] = []
+	# 			T[row['label']] = []
+	# 		P[row['label']].append(0)
+	# 		T[row['label']].append(1)
+
+f.close()
+# Save T and P
+# f = open('./output/T.pickle','wb')
+# pickle.dump(T,f)
+# f.close()
+
+# f = open('./output/P.pickle','wb')
+# pickle.dump(P,f)
+# f.close()
+# # Calculate AP for each class
+# AP = []
+# for key in T.keys():
+# 	class_ap = average_precision_score(T[key], P[key])
+# 	AP.append(AP)
+# 	print('[INFO] Class {}: AP = {}'.format(key, class_ap))
+# print('[INFO] mAP = {}'.format(np.mean(AP)))
