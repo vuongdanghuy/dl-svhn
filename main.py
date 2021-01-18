@@ -8,38 +8,69 @@ from sklearn.model_selection import train_test_split
 from train import train_detector
 from keras.utils import to_categorical
 
-# Load all positive images and negative images
+# Get all samples from positive set
+df_pos = pd.read_csv('../data/labels/posRP.csv')
+
 posImg = []
+posLabel = []
+
+print('[INFO] Loading positive samples...')
+for index, row in df_pos.iterrows():
+	# Load image
+	image = cv2.imread(os.path.join(cfg.EXTRA_PATH, row['name']))
+
+	# Get patch
+	window = image[row['y']:row['y']+row['h'],
+					row['x']:row['x']+row['w'],:]
+
+	# Convert to gray scale
+	# image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+	# Resize image
+	window = cv2.resize(window, cfg.IMG_SIZE, interpolation=cv2.INTER_AREA)
+
+	# Get label from name
+	# label = name.split('_')[-1]
+	# label = label.split('.')[0]
+	# posLabel.append(np.int(label))
+	posLabel.append(row['label'])
+
+	posImg.append(window)
+
+posLabel = np.array(posLabel)
+
+# Get all samples from negative set
+df_neg = pd.read_csv('../data/labels/negRP.csv')
 negImg = []
+negLabel = []
 
-for name in os.listdir(cfg.DIGIT_PATH):
+print('[INFO] Loading negative samples...')
+for index, row in df_neg.sample(np.int(len(posLabel)*1.5), random_state=13).iterrows():
+	# Using only a portion of background samples
+	if index > len(posLabel)*1.5:
+		break
 	# Load image
-	image = cv2.imread(os.path.join(cfg.DIGIT_PATH, name))
+	image = cv2.imread(os.path.join(cfg.EXTRA_PATH, row['name']))
 
-	# Convert to gray scale
-	image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+	# Get patch
+	window = image[row['y']:row['y']+row['h'],
+					row['x']:row['x']+row['w'],:]
 
-	posImg.append(image)
+	# # Convert to gray scale
+	# image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-for name in os.listdir(cfg.NO_DIGIT_PATH):
-	# Load image
-	image = cv2.imread(os.path.join(cfg.NO_DIGIT_PATH, name))
+	# Resize image
+	window = cv2.resize(window, cfg.IMG_SIZE, interpolation=cv2.INTER_AREA)
 
-	# Convert to gray scale
-	image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-	negImg.append(image)
+	negLabel.append(row['label'])
+	negImg.append(window)
 
 # Convert to numpy array and normalizatin
-posImg = np.array(posImg, dtype=np.float)/255.0
-negImg = np.array(negImg, dtype=np.float)/255.0
+posImg = np.array(posImg, dtype=np.float32)/255.0
+negImg = np.array(negImg, dtype=np.float32)/255.0
 
 print('Shape of posImg: ', posImg.shape)
 print('Shape of posImg: ', negImg.shape)
-
-# Create label for each set
-posLabel = np.ones(posImg.shape[0])
-negLabel = np.zeros(negImg.shape[0])
 
 # Concat data and split into train and validation set
 X = np.concatenate((posImg, negImg), axis=0)
@@ -49,13 +80,7 @@ y = to_categorical(label)
 print('Shape of X: ', X.shape)
 print('Shape of y: ', y.shape)
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=7)
-
-X_train = X_train[:, np.newaxis]
-X_train = np.transpose(X_train, axes=(0,2,3,1))
-
-X_test = X_test[:, np.newaxis]
-X_test = np.transpose(X_test, axes=(0,2,3,1))
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=7)
 
 
 print('Shape of X_train, X_test: ', X_train.shape, X_test.shape)
@@ -63,4 +88,5 @@ print('Shape of y_train, y_test: ', y_train.shape, y_test.shape)
 
 
 # Train model
-train_detector(X_train, X_test, y_train, y_test, batch_size=cfg.BATCH_SIZE, epochs=cfg.EPOCHS, save_file=cfg.MODEL_PATH)
+train_detector(X_train, X_test, y_train, y_test, nb_classes=y.shape[1], batch_size=cfg.BATCH_SIZE, epochs=cfg.EPOCHS, 
+	do_augment=False, save_file=cfg.MODEL_PATH)

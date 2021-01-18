@@ -23,10 +23,13 @@ NO_DIGIT_PATH = DES_PATH + 'no_digits/'
 LABEL_PATH = BASE_PATH + 'labels/'
 
 # Train set label
-TRAIN_LABEL_FILE = LABEL_PATH + 'train_label.csv'
+TRAIN_LABEL_FILE = LABEL_PATH + 'train.csv'
 
 # Test set label
-TEST_LABEL_FILE = LABEL_PATH + 'test_label.csv'
+TEST_LABEL_FILE = LABEL_PATH + 'test.csv'
+
+# Extra set label
+EXTRA_LABEL_FILE = LABEL_PATH + 'extra_label.csv'
 
 #### Build dataset parameters ####
 # Number of region proposal per images
@@ -38,11 +41,14 @@ PRP_PER_IMAGE = 30
 # Number of negative region per images
 NRP_PER_IMAGE = 30
 
+# IoU threshold to decide a box is near ground truth. Use for bounding box regression
+regThresh = 0.7
+
 # IoU threshold to decide a box is positive
-posThresh = 0.6
+posThresh = 0.5
 
 # IoU threshold to decide a box is negative
-negThresh = 0.1
+negThresh = 0.2
 
 # Image target size
 IMG_SIZE = (32, 32)
@@ -55,4 +61,10 @@ EPOCHS = 25
 OUTPUT_PATH = './output/'
 
 # Model path
-MODEL_PATH = OUTPUT_PATH + 'model.pkl'
+MODEL_PATH = OUTPUT_PATH + 'model.hdf5'
+
+# Classify model path
+CLASSIFY_PATH = OUTPUT_PATH + 'classify.pkl'
+
+# Regression model path
+REGRESSION_PATH = OUTPUT_PATH + 'regression.pkl'
