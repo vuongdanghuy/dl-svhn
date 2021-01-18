@@ -19,8 +19,7 @@ ap.add_argument('-t', '--threshold', type=float, default=0.9, help='NMS threshol
 args = vars(ap.parse_args())
 
 # Load test label
-# test_df = pd.read_csv(cfg.TEST_LABEL_FILE)
-test_df = pd.read_csv('../data/labels/train_label.csv')
+test_df = pd.read_csv(cfg.TEST_LABEL_FILE)
 
 # Find all image names in test dataset
 names = test_df.name.unique()
@@ -40,14 +39,10 @@ f.close()
 
 threshold = 0.9
 
-# Initialize list
-# file = open('./output/pred.csv', 'w')
-# file.write('{},{},{},{},{},{},{}\n'.format('name','x','y','w','h','score','label'))
-
 # Run test model in some test image
 for name in names:
 	print('Processing image {}'.format(name))
-	image = cv2.imread(os.path.join(cfg.TRAIN_PATH, name))
+	image = cv2.imread(os.path.join(cfg.EXTRA_PATH, name))
 
 	# Perform selective search
 	rects = selective_search(image, method='quality', verbose=False, display=False)
@@ -60,31 +55,20 @@ for name in names:
 		window = image[y:y+h, x:x+w]
 		# Resize to target size
 		im_rsz = cv2.resize(window, cfg.IMG_SIZE)
-		# Convert to grayscale
-		# im_rsz = cv2.cvtColor(im_rsz, cv2.COLOR_BGR2GRAY)
 		# Append to list
 		rp.append(im_rsz)
 
 	# Convert to grayscale and normalization
 	rp = np.array(rp, dtype=np.float)/255.0
 
-	# Add new dimension
-	# rp = rp[:, np.newaxis]
-	# rp = np.transpose(rp, axes=(0,2,3,1))
-
-	# Predict 
-	# pred = model.predict(rp)
+	# Predict
 	features = extractor.predict(rp)
 	pred = classifier.predict_proba(features)
-	# print(pred[0])
-	# exit()
+
 	# Find every bounding box with probability greater than threshold
 	index = np.where(np.max(pred[:,1:], axis=1) >= threshold)[0]
 	pred = pred[index,:]
-	print('[DBG] Aha. Den day roi')
-
 	bbox = rects[index,:]
-	# print(bbox.shape)
 	# print('[DBG] bbox:\n', bbox)
 
 	if (len(bbox)==0):
@@ -100,8 +84,6 @@ for name in names:
 
 	for label in uniqueLabel:
 		labelIdx = np.where(labels == label)[0]
-		# boxes = np.array([bbox[labelIdx,0], bbox[labelIdx,0] + bbox[labelIdx,2], 
-		# 		bbox[labelIdx,1], bbox[labelIdx,1] + bbox[labelIdx,3]]).T
 		boxes = bbox[labelIdx,:]
 		scores = pred[labelIdx,label]
 		# print('[DBG] boxes:\n', boxes)
@@ -130,8 +112,6 @@ for name in names:
 	print('[INFO] Number of predicted boxes: ', len(result))
 
 	for x,y,w,h,score,label in result:
-		# Append result to list
-		# file.write('{},{},{},{},{},{},{}\n'.format(name,x,y,w,h,score,label))
 		output = image.copy()
 		red = (0,0,255)
 		green = (0,255,0)
@@ -159,11 +139,3 @@ for name in names:
 
 	if flag:
 		break
-
-# # Create a pandas dataframe
-# df = pd.DataFrame(list(zip(name_list, x_list, y_list, w_list, h_list, prob_list, label_list)),
-# 				columns=['name', 'x', 'y', 'w', 'h', 'score', 'label'])
-
-# # Save to .csv file
-# df.to_csv('./output/pred.csv', index=False)
-# file.close()

@@ -11,6 +11,21 @@ from sklearn.metrics import classification_report
 def train_detector(X_train, X_test, Y_train, Y_test, nb_filters = 32, batch_size=128, epochs=5, nb_classes=2, 
 	do_augment=False, save_file='./detector_model.h5y', random_state=0):
 	"""
+	Create a digit detector model
+	@INPUT:
+		- X_train: train data
+		- X_test: test data
+		- Y_train: train target
+		- Y_test: test target
+		- nb_filters: number of kernels. Default = 32
+		- batch_size: Batch size. Default = 128
+		- epochs: Number of training epochs. Default = 5
+		- nb_classes: number of classes. Default = 2
+		- do_augment: Data augumentation flag. Default = False
+		- save_file: Path to save model
+		- random_state: Random number generator for reproducibility. Default = 0
+	@OUTPUT:
+		- model: Saved model in save_file path
 	"""
 	# Fix random number generator for reproducibility
 	np.random.seed(random_state)
@@ -20,11 +35,12 @@ def train_detector(X_train, X_test, Y_train, Y_test, nb_filters = 32, batch_size
 
 	# size of pooling area for max pooling
 	pool_size = (2, 2)
+
 	# convolution kernel size
 	kernel_size = (3, 3) 
 	input_shape = (img_rows, img_cols, 3)
 
-
+	# Create model
 	model = Sequential()
 	model.add(Conv2D(filters=nb_filters, kernel_size=(kernel_size[0], kernel_size[1]),
 	                        padding='valid',
@@ -52,12 +68,15 @@ def train_detector(X_train, X_test, Y_train, Y_test, nb_filters = 32, batch_size
 	model.add(Dense(nb_classes))
 	model.add(Activation('softmax'))
 
+	# Compile model
 	model.compile(loss='categorical_crossentropy',
 	              optimizer='adam',
 	              metrics=['accuracy'])
 
+	# Set up early stopping
 	callback = EarlyStopping(monitor='val_loss', patience=3)
 
+	# Data augumentation
 	if do_augment:
 	    datagen = ImageDataGenerator(
 	        rotation_range=20,
@@ -70,13 +89,14 @@ def train_detector(X_train, X_test, Y_train, Y_test, nb_filters = 32, batch_size
 	                        steps_per_epoch=np.int(len(X_train)/batch_size), epochs=epochs,
 	                        validation_data=(X_test, Y_test))
 	else:
+		# Fit model
 	    history = model.fit(X_train, Y_train, batch_size=batch_size, epochs=epochs,
 	          verbose=1, callbacks=[callback], validation_data=(X_test, Y_test))
     
     # Save model
 	model.save(save_file)
 
-
+	# Evaluate model
 	score = model.evaluate(X_test, Y_test, verbose=0)
 	print('Test score:', score[0])
 	print('Test accuracy:', score[1])

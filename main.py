@@ -9,7 +9,7 @@ from train import train_detector
 from keras.utils import to_categorical
 
 # Get all samples from positive set
-df_pos = pd.read_csv('../data/labels/posRP.csv')
+df_pos = pd.read_csv(cfg.POSSITIVE_LABEL_FILE)
 
 posImg = []
 posLabel = []
@@ -23,24 +23,17 @@ for index, row in df_pos.iterrows():
 	window = image[row['y']:row['y']+row['h'],
 					row['x']:row['x']+row['w'],:]
 
-	# Convert to gray scale
-	# image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
 	# Resize image
 	window = cv2.resize(window, cfg.IMG_SIZE, interpolation=cv2.INTER_AREA)
 
-	# Get label from name
-	# label = name.split('_')[-1]
-	# label = label.split('.')[0]
-	# posLabel.append(np.int(label))
+	# Append data
 	posLabel.append(row['label'])
-
 	posImg.append(window)
 
 posLabel = np.array(posLabel)
 
 # Get all samples from negative set
-df_neg = pd.read_csv('../data/labels/negRP.csv')
+df_neg = pd.read_csv(cfg.NEGATIVE_LABEL_FILE)
 negImg = []
 negLabel = []
 
@@ -55,9 +48,6 @@ for index, row in df_neg.sample(np.int(len(posLabel)*1.5), random_state=13).iter
 	# Get patch
 	window = image[row['y']:row['y']+row['h'],
 					row['x']:row['x']+row['w'],:]
-
-	# # Convert to gray scale
-	# image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 	# Resize image
 	window = cv2.resize(window, cfg.IMG_SIZE, interpolation=cv2.INTER_AREA)

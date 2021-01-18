@@ -110,7 +110,7 @@ def predict(filename):
 			result = label_box
 	# print('[INFO] After NMS there are {} bounding box'.format(len(result)))
 
-	# Find TP, FP for each class
+	# Write result
 	for x,y,w,h,prob,label in result:
 		f.write('- Label {}: score {}\n'.format(label, np.around(prob,3)))
 		
@@ -132,9 +132,8 @@ def hello():
 
 @app.route('/')
 def index():
-	# files = os.listdir(app.config['UPLOAD_PATH'])
-	# print('[DBG] Files:\n', files)
 	try:
+		# Display only the recently uploaded image
 		print('[DBG] Branch try')
 		filename = max(glob.glob(app.config['UPLOAD_PATH'] + '/*.png'), key=os.path.getctime)
 		filename = [filename.split('\\')[-1]]

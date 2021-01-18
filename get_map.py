@@ -51,11 +51,6 @@ def get_map(path, true_df, pred_df):
 	# Loop all images
 	for k,name in enumerate(names):
 		# print('[INFO] Processing image {}/{}'.format(k,len(names)))
-		# Load image
-		# image = cv2.imread(os.path.join(path, name))
-
-		# # Get image shape
-		# ih,iw = image.shape[:2]
 
 		# Get ground truth box in image
 		gtbox = gt_df[gt_df.name==name].copy()
@@ -116,14 +111,6 @@ def get_map(path, true_df, pred_df):
 				P[row['label']].append(0)
 				T[row['label']].append(1)
 
-	# Save T and P
-	# f = open('./output/T.pickle','wb')
-	# pickle.dump(T,f)
-	# f.close()
-
-	# f = open('./output/P.pickle','wb')
-	# pickle.dump(P,f)
-	# f.close()
 	# Calculate AP for each class
 	AP = []
 	for key in T.keys():

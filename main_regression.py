@@ -25,7 +25,7 @@ from keras.layers import Dense, Dropout
 #### Prepare data ####
 
 # Load label file
-df = pd.read_csv('../data/labels/regRP.csv')
+df = pd.read_csv(cfg.REGRESSION_LABEL_FILE)
 
 # Initialize array to hold input and target
 inputs = []

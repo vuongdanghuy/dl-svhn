@@ -34,29 +34,21 @@ f.close()
 # Load test label file
 df = pd.read_csv(cfg.TEST_LABEL_FILE)
 
-# Initialize True and Predict list
-f = open('../data/labels/infer.csv','w')
-f.write('name,x,y,w,h,score,label\n')
+# Open file to write predicted bounding box coordinate
+f = open(cfg.INFER_LABEL_FILE,'w')
+f.write('name,left,top,width,height,score,label\n')
 
 # Find all image name in test set
 names = df.name.unique()
 
 # Loop all images
 for k,name in enumerate(names[1000:2000]):
-	# name = '141256.png'
 	print('[INFO] Processing image {}/{}'.format(k+1,len(names)))
 	# Load image
 	image = cv2.imread(os.path.join(cfg.EXTRA_PATH, name))
 
 	# Get image shape
 	ih,iw = image.shape[:2]
-
-	# Get ground truth box in image
-	# gtbox = df[df.name==name].copy()
-
-	# # Mark all ground truth box as not found
-	# for index, _ in gtbox.iterrows():
-	# 	gtbox.loc[index, 'matched'] = False
 
 	# Selective search
 	rects = selective_search(image, method='quality', verbose=False, display=False)
@@ -113,63 +105,9 @@ for k,name in enumerate(names[1000:2000]):
 			result = label_box
 	# print('[INFO] After NMS there are {} bounding box'.format(len(result)))
 
-	# Find TP, FP for each class
+	# Write to label file
 	for x,y,w,h,prob,label in result:
 		f.write('{},{},{},{},{},{},{}\n'.format(name,x,y,w,h,prob,label))
-		# If label is not in list then initialize
-	# 	label = int(label)
-	# 	if label not in P:
-	# 		P[label] = []
-	# 		T[label] = []
-	# 	# Append label
-	# 	P[label].append(prob)
-	# 	found_match = 0
 
-	# 	# Loop all ground truth bounding box
-	# 	for index, row in gtbox.iterrows():
-	# 		# Get bounding box coordinate
-	# 		gtx = row['left']
-	# 		gty = row['top']
-	# 		gtw = row['width']
-	# 		gth = row['height']
-
-	# 		# If GT box label is not matched or GT box if found, then continue
-	# 		if row['matched'] or row['label'] != label:
-	# 			continue
-
-	# 		# Find IoU
-	# 		iou_score = iou((x,x+w,y,y+h), (gtx,gtx+gtw,gty,gty+gth))
-
-	# 		# If IoU is greater than a threshold, mark this GT box is found
-	# 		if iou_score >= args['iou']:
-	# 			found_match = 1
-	# 			gtbox.loc[index, 'matched'] = True
-	# 			break
-	# 	T[label].append(found_match)
-	# # print('[DBG] gtbox:\n', gtbox)
-
-	# # Loop all GT box to find what GT box is not found
-	# for index, row in gtbox.iterrows():
-	# 	if not row['matched']:
-	# 		if row['label'] not in P:
-	# 			P[row['label']] = []
-	# 			T[row['label']] = []
-	# 		P[row['label']].append(0)
-	# 		T[row['label']].append(1)
-
+# Close file
 f.close()
-# Save T and P
-# f = open('./output/T.pickle','wb')
-# pickle.dump(T,f)
-# f.close()
-
-# f = open('./output/P.pickle','wb')
-# pickle.dump(P,f)
-# f.close()
-# # Calculate AP for each class
-# AP = []
-# for key in T.keys():
-# 	class_ap = average_precision_score(T[key], P[key])
-# 	AP.append(AP)
-# 	print('[INFO] Class {}: AP = {}'.format(key, class_ap))
-# print('[INFO] mAP = {}'.format(np.mean(AP)))

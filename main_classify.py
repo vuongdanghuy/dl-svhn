@@ -61,7 +61,7 @@ print('[INFO] gtLabel shape: ', gtLabel.shape)
 #### Get all negative sample feature ####
 
 # Load label file
-neg_df = pd.read_csv('../data/labels/negRP.csv')
+neg_df = pd.read_csv(cfg.NEGATIVE_LABEL_FILE)
 
 negBox = []
 negLabel = []

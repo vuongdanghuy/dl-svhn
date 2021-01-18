@@ -10,16 +10,7 @@ TEST_PATH = BASE_PATH + 'test/'
 # Extra dataset
 EXTRA_PATH = BASE_PATH + 'extra/'
 
-#### Path to processed dataset ####
-DES_PATH = BASE_PATH + 'dataset/'
-
-# Dataset that contains number
-DIGIT_PATH = DES_PATH + 'digits/'
-
-# Dataset that contains background
-NO_DIGIT_PATH = DES_PATH + 'no_digits/'
-
-#### Labels folder contains ground truth bounding box ####
+#### Labels folder contains bounding box ####
 LABEL_PATH = BASE_PATH + 'labels/'
 
 # Train set label
@@ -30,6 +21,18 @@ TEST_LABEL_FILE = LABEL_PATH + 'test.csv'
 
 # Extra set label
 EXTRA_LABEL_FILE = LABEL_PATH + 'extra_label.csv'
+
+# Predicted label
+INFER_LABEL_FILE = LABEL_PATH + 'infer.csv'
+
+# Positive samples label file
+POSITIVE_LABEL_FILE = LABEL_PATH + 'posRP.csv'
+
+# Negative samples label file
+NEGATIVE_LABEL_FILE = LABEL_PATH + 'negRP.csv'
+
+# Regression samples label file
+REGRESSION_LABEL_FILE = LABEL_PATH + 'regRP.csv'
 
 #### Build dataset parameters ####
 # Number of region proposal per images
