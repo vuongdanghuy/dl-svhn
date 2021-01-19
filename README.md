@@ -1,38 +1,33 @@
-# Street View Home Number Detection & Recognition
+# House number detection - Faster R-CNN on Google colab
+Clone from [source](https://github.com/kbardool/keras-frcnn)  
 
-This project use Format 1 dataset from **SVHN dataset**, obtained from house numbers in Google Street View images.  
-
-These are the original, variable-resolution, color house-number images with character level bounding boxes, as shown in the examples images above. (The blue bounding boxes in the example image are just for illustration purposes. The bounding box information are stored in digitStruct.mat instead of drawn directly on the images in the dataset.)  
-
-Each tar.gz file contains the orignal images in png format, together with a **digitStruct.mat** file, which can be loaded using Matlab. The **digitStruct.mat** file contains a struct called digitStruct with the same length as the number of original images. Each element in **digitStruct** has the following fields: **name** which is a string containing the filename of the corresponding image, **bbox** which is a struct array that contains the position, size and label of each digit bounding box in the image.  
-
-Eg: digitStruct(300).bbox(2).height gives height of the 2nd digit bounding box in the 300th image.  
-
-You can download this dataset [here](http://ufldl.stanford.edu/housenumbers/).
-
-## How to use this project  
-
-1. Download dataset from this link [here](http://ufldl.stanford.edu/housenumbers/).
-2. Extract training and testing dataset to folder name **data**
-3. Clone this Git repository, you'll have a folder name **cv-ndetect** contain all the source code. Your working folder now would look like this:
-```
-.
-|-- cv-ndetect/
-|   |-- 16x32/
-|-- data
-    |-- test/
-    |-- train/
-```
-You can delete all the *.mat* and *.m* in folder **test** and **train** or moving them to another folder. Those files contain bounding boxes of numbers in image and will be replaced by 2 csv files ***train_label.csv*** and ***test_label.csv***.  
-
-**cv-ndetect** folder contains the following files:
-  + **hn_detect.py**: All functions used in Jupyter notebook files are declared in this file.  
-  + **train_label.csv, test_label.csv**: Training set label and Testing set label rewritten in csv form. Each row contain: *image name*, *top, left* position of bounding box, *width, height* of bounding box
-  + **convert_mat.m**: Matlab script used to load *.mat* file in training set and testing set and create *train_label.csv, test_label.csv* file
-  + **pre_processing.ipynb**: Used to test pre-processing image function.
+***Dependencies:***  
+* tensorflow-gpu: 1.14.0  
+* keras: 2.2.4
+* h5py: 2.10.0  
   
-  Run the following Jupyter notebook files:
-  + **data_inspection.ipynb**: Used to inspect training, testing images as well as training bounding box
-  + **crop_by_label.ipynb**: Used to create True positive feature dataset for classifier model. This data set is named *HOG_16x32* and is saved in folder ***16x32***
-  + **negative_dataset.ipynb**: Used to create True negative feature dataset for classifier model. This dataset is named *negative_set.p* and is saved in folder ***16x32***
-  + **training.ipynb**: Used to load dataset, train classifier model and test model on test set. Trained models are saved in folder ***16x32***
+**1. Train model**  
+  * **Bước 1:** Chuẩn bị file txt với mỗi dòng có format như sau: `filepath,x1,y1,x2,y2,class_name`  
+  ***Ví dụ:***  
+/content/1.png,837,346,981,456,1  
+/content/2.png,215,312,279,391,9   
+  * **Bước 2:** Sử dụng `train_frcnn.py` để train model: `python train_frcnn.py -o simple -p my_data.txt`  
+  * **Bước 3:** Chạy `train_frcnn.py` sẽ lưu các tham số weights của model vào file **hdf5**, mọi cài đặt trong quá trình trainning được lưu vào một `pickle` file. Những cài đặt này được load bởi `test_frcnn.py` cho quá trình testing.  
+    
+***Note:*** Cấu trúc thư mục:  
+  ```  
+    |-- keras_frcnn/  
+    |  |-- data/  
+    |  |-- keras_frcnn/  
+   ```
+  * `keras_frcnn` chứa folder keras_frcnn, file `pickle`, file `lib.txt` lưu tên các thư viện cần cài đặt, file `model_frcnn.dhf5` chứa pre-trained weights, `train_frcnn.py`, `test_frcnn.py`, file `training.ipynb` quá trình training và testing trên google colab.  
+  * data: chứa file `train.txt`, `test.txt` và `val.txt` phục vụ cho quá trình training và testing; file `inference_result_frcnn.csv` lưu kết quả inference của tập test.  
+  * Dữ liệu từ các tập train, val và test được nén và đưa lên drive, sau đó được extract vào `content` trong mỗi phiên làm việc với google colab.  
+    
+**2. Infer model**  
+  Từ pre-trained weights và file config (`pickle`), thực hiện infer tập ảnh test như sau: `python test_frcnn.py -p <path to test data>`.  
+    
+**3. Results**  
+  * Inference time: 1s/image  
+  * mAP = 96.8 %  
+  [img]
